@@ -245,19 +245,17 @@ module Ooyala
         raise Ooyala::MethodNotSupportedException
       end
 
-      request_path = '/v2/' + request_path unless request_path[0..3] == '/v2/'
+      request_path = '/v2/' + request_path unless (request_path[0..3] == '/v2/') || request_path.match(/http/)
       original_params = Hash[*query_params.map { |k,v| [k.to_sym, v] }.flatten]
       query_params = sanitize_and_add_needed_parameters(query_params)
       query_params[:signature] ||= generate_signature(http_method,
                                     request_path,
                                     query_params.merge(original_params),
                                     request_body)
-
       request = RestClient::Request.new\
         :method  => http_method.to_s.downcase.to_sym,
         :url     => build_url(http_method, request_path, query_params),
         :payload => request_body
-
       response = request.execute
 
       return [] if response.body.empty?
@@ -277,6 +275,7 @@ module Ooyala
     #
     # Returns a String with the built URL.
     def build_url(http_method, request_path, query_params = {})
+      return request_path if request_path.match(/http/)
       url  = http_method == 'GET' ? cache_base_url : base_url
       url += request_path + '?'
       url + query_params.sort { |a, b| a[0].to_s <=> b[0].to_s }.map do |param|
